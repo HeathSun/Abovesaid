@@ -30,31 +30,6 @@ The system intelligently expands analysis to surrounding paragraphs (up to 3000 
 
 Built on modern web technologies with Minimax AI as the core intelligence engine. The system operates as a Chrome browser extension with local-first data storage and privacy-preserving architecture.
 
-## Setup
-
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-2. **Set up API key**:
-   - Copy `.env.local.example` to `.env.local`
-   - Add your Groq API key:
-     ```
-     VITE_GROQ_API_KEY=your_actual_api_key_here
-     ```
-
-3. **Build the extension**:
-   ```bash
-   npm run build
-   ```
-
-4. **Load in Chrome**:
-   - Open `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked"
-   - Select the `dist` folder
-
 ## Development
 
 Run in development mode with hot reload:
