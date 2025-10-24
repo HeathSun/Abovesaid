@@ -14,6 +14,9 @@ As an agentic system, Abovesaid doesn't just highlight text—it creates a **sem
 
 ## Current Capabilities
 
+
+![v1.0](public/Abovesaid-AI-Feature-1.0-Demo-Heath-Sun-_1080p_-h264_.gif)
+
 **Intelligent Content Distillation**
 Abovesaid analyzes web content in real-time, applying multi-level importance scoring and semantic classification to every sentence. Information is graded from critical (deeply highlighted) to background (transparent), following a power-law distribution that mirrors human attention patterns.
 
