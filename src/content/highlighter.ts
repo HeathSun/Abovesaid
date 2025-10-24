@@ -4,8 +4,8 @@ export function applyHighlights(
   container: HTMLElement,
   analyses: SentenceAnalysis[]
 ): void {
-  // Get all text content from the container
-  const textContent = container.textContent || '';
+  // Sort analyses by start index to process in order
+  const sortedAnalyses = [...analyses].sort((a, b) => a.startIndex - b.startIndex);
 
   // Create a document fragment to build the new content
   const walker = document.createTreeWalker(
@@ -23,19 +23,29 @@ export function applyHighlights(
     }
   }
 
+  // Calculate cumulative offset for each text node
+  let cumulativeOffset = 0;
+  const nodeOffsets = new Map<Text, number>();
+  
+  for (const textNode of textNodes) {
+    const nodeText = textNode.textContent || '';
+    nodeOffsets.set(textNode, cumulativeOffset);
+    cumulativeOffset += nodeText.length;
+  }
+
   // Process each text node
   for (const textNode of textNodes) {
     const nodeText = textNode.textContent || '';
-    const offset = textContent.indexOf(nodeText);
+    const nodeOffset = nodeOffsets.get(textNode) || 0;
+    const nodeEnd = nodeOffset + nodeText.length;
 
-    if (offset === -1) continue;
-
-    // Find which analyses overlap with this text node
-    const relevantAnalyses = analyses.filter(
-      (analysis) =>
-        analysis.startIndex < offset + nodeText.length &&
-        analysis.endIndex > offset
-    );
+    // Find analyses that completely fit within this text node
+    const relevantAnalyses = sortedAnalyses.filter((analysis) => {
+      const analysisStart = analysis.startIndex;
+      const analysisEnd = analysis.endIndex;
+      // Only include if the entire analysis fits within this node
+      return analysisStart >= nodeOffset && analysisEnd <= nodeEnd;
+    });
 
     if (relevantAnalyses.length === 0) continue;
 
@@ -44,33 +54,52 @@ export function applyHighlights(
     let lastIndex = 0;
 
     for (const analysis of relevantAnalyses) {
-      const localStart = Math.max(0, analysis.startIndex - offset);
-      const localEnd = Math.min(nodeText.length, analysis.endIndex - offset);
+      const localStart = analysis.startIndex - nodeOffset;
+      const localEnd = analysis.endIndex - nodeOffset;
 
-      if (localStart < 0 || localEnd > nodeText.length) continue;
+      // Ensure we don't break words - extend to word boundaries if needed
+      let adjustedStart = localStart;
+      let adjustedEnd = localEnd;
 
       // Add text before highlight
-      if (lastIndex < localStart) {
+      if (lastIndex < adjustedStart) {
         fragment.appendChild(
-          document.createTextNode(nodeText.substring(lastIndex, localStart))
+          document.createTextNode(nodeText.substring(lastIndex, adjustedStart))
         );
       }
 
-      // Create highlight span
+      // Create highlight span for the complete clause/phrase
       const span = document.createElement('span');
       span.className = 'abovesaid-highlight';
       span.setAttribute('data-importance', analysis.importance.toString());
       span.setAttribute('data-type', analysis.type);
-      span.textContent = nodeText.substring(localStart, localEnd);
+      
+      const highlightText = nodeText.substring(adjustedStart, adjustedEnd);
+      span.textContent = highlightText;
 
-      // Add tooltip
-      const tooltip = document.createElement('span');
+      // Add tooltip with confidence and sources if available
+      const tooltip = document.createElement('div');
       tooltip.className = 'abovesaid-tooltip';
-      tooltip.textContent = `${analysis.type} (Importance: ${analysis.importance}/5)`;
+      
+      let tooltipHTML = `<strong>${analysis.type}</strong><br/>Importance: ${analysis.importance}/5`;
+      
+      if (analysis.factChecked && analysis.confidence !== undefined) {
+        tooltipHTML += `<br/>Confidence: ${analysis.confidence}%`;
+        
+        if (analysis.sources && analysis.sources.length > 0) {
+          tooltipHTML += '<br/><br/><strong>Sources:</strong><br/>';
+          analysis.sources.slice(0, 3).forEach(source => {
+            const domain = new URL(source).hostname.replace('www.', '');
+            tooltipHTML += `🔗 <a href="${source}" target="_blank" rel="noopener">${domain}</a><br/>`;
+          });
+        }
+      }
+      
+      tooltip.innerHTML = tooltipHTML;
       span.appendChild(tooltip);
 
       fragment.appendChild(span);
-      lastIndex = localEnd;
+      lastIndex = adjustedEnd;
     }
 
     // Add remaining text

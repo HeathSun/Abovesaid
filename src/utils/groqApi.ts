@@ -10,9 +10,11 @@ export async function analyzeTextWithGroq(
     throw new Error('Groq API key not found');
   }
 
-  const prompt = `You are an expert text analyzer. Analyze the following text and identify the importance and type of each sentence.
+  const prompt = `You are an expert text analyzer. Analyze the following text and identify the importance and type of each clause or phrase.
 
-For each sentence, provide:
+CRITICAL: Split text ONLY at punctuation marks (periods, commas, semicolons, colons, question marks, exclamation marks). Each segment must be a complete clause between punctuation marks. NEVER split in the middle of a word or phrase.
+
+For each text segment, provide:
 1. importance: A number from 1-5 (1=least important, 5=most important)
 2. type: One of these categories:
    - "Main Claim": Core thesis or main argument
@@ -25,10 +27,12 @@ For each sentence, provide:
 Return ONLY a JSON object with this structure:
 {
   "sentences": [
-    {"text": "The sentence text.", "importance": 5, "type": "Main Claim"},
+    {"text": "Complete clause or phrase between punctuation.", "importance": 5, "type": "Main Claim"},
     ...
   ]
 }
+
+IMPORTANT: Copy the text segments EXACTLY as they appear, including punctuation. Each text segment should end with its punctuation mark (., , ; : ? !).
 
 Text to analyze:
 ${text}`;

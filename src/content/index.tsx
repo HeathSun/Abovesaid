@@ -3,15 +3,27 @@ import { ImportanceButton } from '../components/ImportanceButton';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { RemoveButton } from '../components/RemoveButton';
 import { analyzeTextWithGroq } from '../utils/groqApi';
+import { factCheckSentences } from '../utils/perplexityApi';
 import { saveHighlights, loadHighlights, removeHighlights as removeStoredHighlights, hasHighlights } from '../utils/storage';
 import { applyHighlights, removeHighlights, getMainContent } from './highlighter';
 import './content.css';
 
 class AbovesaidContent {
-  private buttonContainers: Map<HTMLElement, HTMLElement> = new Map();
-  private loadingContainer: HTMLElement | null = null;
-  private removeButtonContainer: HTMLElement | null = null;
-  private currentUrl: string = window.location.href;
+  private buttonContainers: Map<HTMLElement, HTMLElement>;
+  private analyzedElements: Map<HTMLElement, boolean>; // Track which elements have been analyzed
+  private factCheckedElements: Set<HTMLElement>; // Track which elements have been fact-checked
+  private loadingContainer: HTMLElement | null;
+  private removeButtonContainer: HTMLElement | null;
+  private currentUrl: string;
+
+  constructor() {
+    this.buttonContainers = new Map();
+    this.analyzedElements = new Map();
+    this.factCheckedElements = new Set();
+    this.loadingContainer = null;
+    this.removeButtonContainer = null;
+    this.currentUrl = window.location.href;
+  }
 
   async init() {
     // Check if highlights already exist for this page
@@ -131,6 +143,26 @@ class AbovesaidContent {
   }
 
   private async handleAnalyze(element: HTMLElement) {
+    const isAlreadyAnalyzed = this.analyzedElements.get(element);
+    const isAlreadyFactChecked = this.factCheckedElements.has(element);
+
+    // First click: Importance analysis
+    if (!isAlreadyAnalyzed) {
+      await this.performImportanceAnalysis(element);
+      return;
+    }
+
+    // Second click: Fact-check
+    if (isAlreadyAnalyzed && !isAlreadyFactChecked) {
+      await this.performFactCheck(element);
+      return;
+    }
+
+    // Third+ click: Show info
+    alert('This section has been analyzed and fact-checked.\nFirst click: Importance highlighting\nSecond click: Fact verification');
+  }
+
+  private async performImportanceAnalysis(element: HTMLElement) {
     // Collect context paragraphs (up to 3000 chars)
     const { elements, text } = this.collectParagraphContext(element);
     
@@ -145,8 +177,8 @@ class AbovesaidContent {
       return;
     }
 
-    // Show loading indicator
-    this.showLoading();
+    // Update loading message
+    this.showLoading('Analyzing importance...');
 
     try {
       // Analyze with Groq
@@ -155,6 +187,7 @@ class AbovesaidContent {
       // Apply highlights to all collected paragraphs
       for (const el of elements) {
         applyHighlights(el, analyses);
+        this.analyzedElements.set(el, true);
       }
 
       // Load existing highlights for this page
@@ -168,6 +201,11 @@ class AbovesaidContent {
 
       // Show remove button
       this.showRemoveButton();
+
+      // Show hint for fact-checking
+      setTimeout(() => {
+        alert('✓ Importance analysis complete!\n\nClick the button again to fact-check statements with Perplexity AI.');
+      }, 500);
     } catch (error) {
       console.error('Error analyzing text:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -183,14 +221,71 @@ class AbovesaidContent {
     }
   }
 
-  private showLoading() {
-    if (!this.loadingContainer) {
-      this.loadingContainer = document.createElement('div');
-      document.body.appendChild(this.loadingContainer);
-
-      const root = createRoot(this.loadingContainer);
-      root.render(<LoadingIndicator />);
+  private async performFactCheck(element: HTMLElement) {
+    // Get highlights for this element
+    const allHighlights = await loadHighlights(this.currentUrl);
+    
+    if (allHighlights.length === 0) {
+      alert('No highlights found. Please analyze the text first.');
+      return;
     }
+
+    this.showLoading('Fact-checking with Perplexity AI...');
+
+    try {
+      // Perform fact-checking
+      const factCheckResults = await factCheckSentences(allHighlights);
+
+      // Update highlights with confidence scores and sources
+      const updatedHighlights = allHighlights.map(h => {
+        const result = factCheckResults.get(h.sentence);
+        if (result) {
+          return {
+            ...h,
+            confidence: result.confidence,
+            factChecked: true,
+            sources: result.sources,
+          };
+        }
+        return h;
+      });
+
+      // Save updated highlights
+      await saveHighlights(this.currentUrl, updatedHighlights);
+
+      // Re-apply highlights with confidence
+      const { elements } = this.collectParagraphContext(element);
+      for (const el of elements) {
+        // Remove old highlights
+        removeHighlights(el);
+        // Apply new highlights with confidence
+        applyHighlights(el, updatedHighlights);
+        this.factCheckedElements.add(el);
+      }
+
+      // Count fact-checked sentences
+      const factCheckedCount = updatedHighlights.filter(h => h.factChecked).length;
+      
+      alert(`✓ Fact-check complete!\n\n${factCheckedCount} statements verified with Perplexity AI.\n\nHover over highlights to see confidence scores.`);
+    } catch (error) {
+      console.error('Error fact-checking:', error);
+      alert('Error during fact-checking. Please try again or check your Perplexity API key.');
+    } finally {
+      this.hideLoading();
+    }
+  }
+
+  private showLoading(message: string = 'Analyzing text importance...') {
+    if (this.loadingContainer) {
+      this.loadingContainer.remove();
+      this.loadingContainer = null;
+    }
+    
+    this.loadingContainer = document.createElement('div');
+    document.body.appendChild(this.loadingContainer);
+
+    const root = createRoot(this.loadingContainer);
+    root.render(<LoadingIndicator message={message} />);
   }
 
   private hideLoading() {

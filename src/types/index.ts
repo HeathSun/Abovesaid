@@ -14,6 +14,9 @@ export interface SentenceAnalysis {
   type: HighlightType;
   startIndex: number;
   endIndex: number;
+  confidence?: number; // 0-100, from Perplexity fact-check
+  factChecked?: boolean;
+  sources?: string[]; // Source URLs from Perplexity
 }
 
 export interface PageHighlights {

@@ -6,11 +6,4 @@ import manifest from './manifest.json'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), crx({ manifest })],
-  build: {
-    rollupOptions: {
-      input: {
-        content: 'src/content/index.tsx',
-      },
-    },
-  },
 })

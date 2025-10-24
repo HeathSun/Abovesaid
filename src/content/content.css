@@ -28,30 +28,7 @@
   background-color: rgba(128, 128, 128, 0.70); /* Most prominent */
 }
 
-/* Type indicators - different shades of gray */
-.abovesaid-highlight[data-type='Main Claim'] {
-  border-left: 3px solid #2a2a2a; /* Very dark gray */
-}
-
-.abovesaid-highlight[data-type='Supporting Evidence'] {
-  border-left: 3px solid #4a4a4a; /* Dark gray */
-}
-
-.abovesaid-highlight[data-type='Reasoning / Explanation'] {
-  border-left: 3px solid #6a6a6a; /* Medium-dark gray */
-}
-
-.abovesaid-highlight[data-type='Example / Illustration'] {
-  border-left: 3px solid #8a8a8a; /* Medium gray */
-}
-
-.abovesaid-highlight[data-type='Counterpoint / Caveat'] {
-  border-left: 3px solid #aaaaaa; /* Light gray */
-}
-
-.abovesaid-highlight[data-type='Background / Context'] {
-  border-left: 3px solid #cccccc; /* Very light gray */
-}
+/* Type indicators removed - no visual borders to avoid confusion */
 
 /* Tooltip */
 .abovesaid-tooltip {
@@ -59,21 +36,41 @@
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.95);
   color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border-radius: 8px;
   font-size: 12px;
-  white-space: nowrap;
+  line-height: 1.6;
+  white-space: normal;
+  max-width: 320px;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
   z-index: 10000;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .abovesaid-highlight:hover .abovesaid-tooltip {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.abovesaid-tooltip strong {
+  color: #ffd700;
+}
+
+.abovesaid-tooltip a {
+  color: #6eb4ff;
+  text-decoration: none;
+  font-size: 11px;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.abovesaid-tooltip a:hover {
+  text-decoration: underline;
 }
 
 /* Importance button container */
